@@ -1,0 +1,15 @@
+# Python Bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual Environments (Critical to ignore)
+venv/
+.venv/
+env/
+
+# VS Code Settings & History
+.vscode/
+.history/
+
+# Environment Variables (Sensitive data)
+.env
