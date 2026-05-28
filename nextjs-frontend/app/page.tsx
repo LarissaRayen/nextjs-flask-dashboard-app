@@ -3,6 +3,7 @@ import { Order } from "./_types/orders";
 import { getData } from "@/utils/fetchData";
 import { getChartData } from "./charts/GetChartData";
 import SalesByDay from "./charts/SalesByDay";
+import UsersByDay from "./charts/UsersByDay";
 
 async function getSalesData(startDate: Date, endDate: Date) {
   const data = await getData();
@@ -36,7 +37,7 @@ async function getSalesData(startDate: Date, endDate: Date) {
   };
 }
 
-async function getUsersData() {
+async function getUsersData(startDate: Date, endDate: Date) {
   const data = await getData();
 
   const users = data.reduce((customerIds: number[], entry: Order) => {
@@ -48,7 +49,28 @@ async function getUsersData() {
     return customerIds;
   }, []);
 
+  const { array, format } = getChartData(startDate, endDate);
+  const dayArray = array.map((date) => {
+    return {
+      date: format(date),
+      totalUsers: 0,
+    };
+  });
+
   return {
+    chartData: data.reduce(
+      (acc: { date: string; totalUsers: number }[], entry: Order) => {
+        const formattedDate = format(new Date(entry.createdAt));
+        const order = acc.find((user) => user.date === formattedDate);
+
+        if (order != null) {
+          order.totalUsers += 1;
+        }
+
+        return acc;
+      },
+      dayArray,
+    ),
     totalUsers: users.length,
     activeUsers: users.reduce((active: number, customerId: number) => {
       const entry: Order = data.find(
@@ -69,29 +91,40 @@ interface PageProps {
   searchParams: Promise<{
     totalSalesRangeFrom?: string;
     totalSalesRangeTo?: string;
+    usersRangeFrom?: string;
+    usersRangeTo?: string;
   }>;
 }
 
 export default async function Home({ searchParams }: PageProps) {
   // Await the searchParams promise before destructuring its fields
   const params = await searchParams;
-  const { totalSalesRangeFrom, totalSalesRangeTo } = params;
+  const {
+    totalSalesRangeFrom,
+    totalSalesRangeTo,
+    usersRangeFrom,
+    usersRangeTo,
+  } = params;
 
   // Shift baseline default dates to 2025 since your python generator targets 2025
   const defaultStartDate = new Date("2025-01-01T00:00:00Z");
   const defaultEndDate = new Date("2025-12-31T23:59:59Z");
 
-  console.log(`${totalSalesRangeFrom}, ${totalSalesRangeTo}`);
-  const startDate = totalSalesRangeFrom
+  const startDateSales = totalSalesRangeFrom
     ? new Date(totalSalesRangeFrom)
     : defaultStartDate;
-  const endDate = totalSalesRangeTo
+  const endDateSales = totalSalesRangeTo
     ? new Date(totalSalesRangeTo)
     : defaultEndDate;
 
+  const startDateUsers = usersRangeFrom
+    ? new Date(usersRangeFrom)
+    : defaultStartDate;
+  const endDateUsers = usersRangeTo ? new Date(usersRangeTo) : defaultEndDate;
+
   const [salesData, usersData] = await Promise.all([
-    getSalesData(startDate, endDate),
-    getUsersData(),
+    getSalesData(startDateSales, endDateSales),
+    getUsersData(startDateUsers, endDateUsers),
   ]);
 
   const formattedCurrency = new Intl.NumberFormat("en-US", {
@@ -128,6 +161,12 @@ export default async function Home({ searchParams }: PageProps) {
           title="Sales By Day"
           body={<SalesByDay data={salesData.chartData} />}
           queryKey="totalSalesRange"
+          isChart
+        />
+        <KPICard
+          title="Users By Day"
+          body={<UsersByDay data={usersData.chartData} />}
+          queryKey="usersRange"
           isChart
         />
       </div>
