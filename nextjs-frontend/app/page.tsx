@@ -1,7 +1,7 @@
 import KPICard from "@/components/KPICard";
 import { Order } from "./_types/orders";
 import { getData } from "@/utils/fetchData";
-import { formatDate, getChartData } from "./charts/GetChartData";
+import { getChartData } from "./charts/GetChartData";
 import SalesByDay from "./charts/SalesByDay";
 
 async function getSalesData(startDate: Date, endDate: Date) {
