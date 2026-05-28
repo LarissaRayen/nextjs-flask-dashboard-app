@@ -1,11 +1,34 @@
 import KPICard from "@/components/KPICard";
 import { Order } from "./_types/orders";
 import { getData } from "@/utils/fetchData";
+import { formatDate, getChartData } from "./charts/GetChartData";
+import SalesByDay from "./charts/SalesByDay";
 
-async function getSalesData() {
+async function getSalesData(startDate: Date, endDate: Date) {
   const data = await getData();
 
+  const { array, format } = getChartData(startDate, endDate);
+
+  const dayArray = array.map((date) => {
+    return {
+      date: format(date),
+      totalSales: 0,
+    };
+  });
+
   return {
+    chartData: data.reduce(
+      (acc: { date: string; totalSales: number }[], entry: Order) => {
+        const formattedDate = format(new Date(entry.createdAt));
+        const orderDay = acc.find((day) => day.date === formattedDate);
+
+        if (orderDay != null) {
+          orderDay.totalSales += entry.amount;
+        }
+        return acc;
+      },
+      dayArray,
+    ),
     amount: data.reduce((amount: number, entry: Order) => {
       return amount + entry["amount"];
     }, 0),
@@ -42,9 +65,32 @@ async function getUsersData() {
   };
 }
 
-export default async function Home() {
+interface PageProps {
+  searchParams: Promise<{
+    totalSalesRangeFrom?: string;
+    totalSalesRangeTo?: string;
+  }>;
+}
+
+export default async function Home({ searchParams }: PageProps) {
+  // Await the searchParams promise before destructuring its fields
+  const params = await searchParams;
+  const { totalSalesRangeFrom, totalSalesRangeTo } = params;
+
+  // Shift baseline default dates to 2025 since your python generator targets 2025
+  const defaultStartDate = new Date("2025-01-01T00:00:00Z");
+  const defaultEndDate = new Date("2025-12-31T23:59:59Z");
+
+  console.log(`${totalSalesRangeFrom}, ${totalSalesRangeTo}`);
+  const startDate = totalSalesRangeFrom
+    ? new Date(totalSalesRangeFrom)
+    : defaultStartDate;
+  const endDate = totalSalesRangeTo
+    ? new Date(totalSalesRangeTo)
+    : defaultEndDate;
+
   const [salesData, usersData] = await Promise.all([
-    getSalesData(),
+    getSalesData(startDate, endDate),
     getUsersData(),
   ]);
 
@@ -75,6 +121,14 @@ export default async function Home() {
           title="Average Revenue Per Month"
           description={`Number Of Orders Per Month : ${Math.round(salesData.count / 12)}`}
           body={`${averageFormatted}`}
+        />
+      </div>
+      <div className="grid mt-5 gap-4 grid-cols-1 lg:grid-cols-2 mx-5">
+        <KPICard
+          title="Sales By Day"
+          body={<SalesByDay data={salesData.chartData} />}
+          queryKey="totalSalesRange"
+          isChart
         />
       </div>
     </>
