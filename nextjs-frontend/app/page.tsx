@@ -48,23 +48,33 @@ export default async function Home() {
     getUsersData(),
   ]);
 
+  const formattedCurrency = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(Math.round(salesData.amount));
+
+  const averageFormatted = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(Math.round(salesData.amount / 12));
+
   return (
     <>
       <div className="grid mt-5 gap-4 grid-cols-1 lg:grid-cols-3 md:grid-cols-2 mx-5">
         <KPICard
           title="Total Revenue"
           description={`Number Of Orders: ${salesData.count}`}
-          body={`$${Math.round(salesData.amount)}`}
+          body={`${formattedCurrency}`}
         />
         <KPICard
           title="Total Users"
           description={`Active Users : ${usersData.activeUsers}`}
-          body={`${usersData.totalUsers}`}
+          body={`${usersData.totalUsers} Users`}
         />
         <KPICard
           title="Average Revenue Per Month"
           description={`Number Of Orders Per Month : ${Math.round(salesData.count / 12)}`}
-          body={`$${Math.round(salesData.amount / 12)}`}
+          body={`${averageFormatted}`}
         />
       </div>
     </>
