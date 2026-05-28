@@ -2,13 +2,13 @@
 
 import React from "react";
 import {
-  BarChart,
   CartesianGrid,
   XAxis,
   YAxis,
-  Bar,
   Tooltip,
   ResponsiveContainer,
+  LineChart,
+  Line,
 } from "recharts";
 
 interface SalesByDayProps {
@@ -20,17 +20,26 @@ interface SalesByDayProps {
 
 const SalesByDay = ({ data }: SalesByDayProps) => {
   return (
-    <ResponsiveContainer>
-      <BarChart data={data} width={500} height={300}>
+    <ResponsiveContainer width={"100%"} minHeight={300}>
+      <LineChart data={data} width={500} height={200}>
         <CartesianGrid stroke="#E0E0E0" />
-        <XAxis dataKey="date" stroke="#fff" />
-        <YAxis stroke="fff" tickFormatter={(value) => `$${value}`} />
+        <XAxis dataKey="date" stroke="#000" fontSize={12} />
+        <YAxis
+          stroke="#000"
+          tickFormatter={(value) => `$${value}`}
+          fontSize={12}
+        />
         <Tooltip
           cursor={{ fill: "#E0E0E0" }}
           formatter={(value) => `$${value}`}
         />
-        <Bar dataKey="totalSales" name="Sales By Day" stroke="#E0E0E0" />
-      </BarChart>
+        <Line
+          dataKey="totalSales"
+          name="Sales By Day"
+          stroke="#8884d8"
+          type={"monotone"}
+        />
+      </LineChart>
     </ResponsiveContainer>
   );
 };
