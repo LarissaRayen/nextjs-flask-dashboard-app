@@ -4,6 +4,7 @@ import { getData } from "@/utils/fetchData";
 import { getChartData } from "./charts/GetChartData";
 import SalesByDay from "./charts/SalesByDay";
 import UsersByDay from "./charts/UsersByDay";
+import RevenueByCategory from "./charts/RevenueByCategory";
 
 async function getSalesData(startDate: Date, endDate: Date) {
   const data = await getData();
@@ -87,12 +88,46 @@ async function getUsersData(startDate: Date, endDate: Date) {
   };
 }
 
+async function getCategoryData(startDate: Date, endDate: Date) {
+  const data = await getData();
+
+  const { array, format } = getChartData(startDate, endDate);
+
+  const categoryArray = [
+    { name: "Electronics", revenue: 0 },
+    { name: "Fashion", revenue: 0 },
+    { name: "Books", revenue: 0 },
+    { name: "Accessories", revenue: 0 },
+  ];
+
+  return {
+    chartData: array.reduce(
+      (acc: { name: string; revenue: number }[], date: Date) => {
+        const entry: Order = data.find(
+          (order: Order) => format(new Date(order.createdAt)) === format(date),
+        );
+
+        if (entry != null) {
+          const category = acc.find((value) => value.name === entry.category);
+          if (category != null) category.revenue += entry.amount;
+          return acc;
+        }
+
+        return acc;
+      },
+      categoryArray,
+    ),
+  };
+}
+
 interface PageProps {
   searchParams: Promise<{
     totalSalesRangeFrom?: string;
     totalSalesRangeTo?: string;
     usersRangeFrom?: string;
     usersRangeTo?: string;
+    categoryRangeFrom?: string;
+    categoryRangeTo?: string;
   }>;
 }
 
@@ -104,6 +139,8 @@ export default async function Home({ searchParams }: PageProps) {
     totalSalesRangeTo,
     usersRangeFrom,
     usersRangeTo,
+    categoryRangeFrom,
+    categoryRangeTo,
   } = params;
 
   // Shift baseline default dates to 2025 since your python generator targets 2025
@@ -122,9 +159,17 @@ export default async function Home({ searchParams }: PageProps) {
     : defaultStartDate;
   const endDateUsers = usersRangeTo ? new Date(usersRangeTo) : defaultEndDate;
 
-  const [salesData, usersData] = await Promise.all([
+  const startDateCategory = categoryRangeFrom
+    ? new Date(categoryRangeFrom)
+    : defaultStartDate;
+  const endDateCategory = categoryRangeTo
+    ? new Date(categoryRangeTo)
+    : defaultEndDate;
+
+  const [salesData, usersData, categoryData] = await Promise.all([
     getSalesData(startDateSales, endDateSales),
     getUsersData(startDateUsers, endDateUsers),
+    getCategoryData(startDateCategory, endDateCategory),
   ]);
 
   const formattedCurrency = new Intl.NumberFormat("en-US", {
@@ -136,6 +181,10 @@ export default async function Home({ searchParams }: PageProps) {
     style: "currency",
     currency: "USD",
   }).format(Math.round(salesData.amount / 12));
+
+  categoryData.chartData = categoryData.chartData.filter(
+    (entry) => entry.revenue > 0,
+  );
 
   return (
     <>
@@ -167,6 +216,12 @@ export default async function Home({ searchParams }: PageProps) {
           title="Users By Day"
           body={<UsersByDay data={usersData.chartData} />}
           queryKey="usersRange"
+          isChart
+        />
+        <KPICard
+          title="Revenue By Category"
+          body={<RevenueByCategory data={categoryData.chartData} />}
+          queryKey="categoryRange"
           isChart
         />
       </div>
